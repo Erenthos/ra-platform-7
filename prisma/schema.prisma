@@ -1,1 +1,109 @@
+// Prisma schema for English Reverse Auction Platform (ra-platform-7)
+// Database: PostgreSQL (Neon)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//
+// ────────────────────────────────────────────────
+//  USER MODEL
+// ────────────────────────────────────────────────
+//
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(SUPPLIER)
+  createdAt DateTime @default(now())
+
+  // Relations
+  auctions  Auction[] @relation("BuyerAuctions") // auctions created by buyer
+  bids      Bid[]     @relation("SupplierBids")  // bids placed by supplier
+}
+
+enum Role {
+  BUYER
+  SUPPLIER
+}
+
+//
+// ────────────────────────────────────────────────
+//  AUCTION MODEL
+// ────────────────────────────────────────────────
+//
+
+model Auction {
+  id            String           @id @default(cuid())
+  title         String
+  description   String
+  duration      Int
+  minDecrement  Float
+  status        AuctionStatus    @default(LIVE)
+  createdAt     DateTime         @default(now())
+  endsAt        DateTime
+  buyerEmail    String
+  buyer         User?            @relation("BuyerAuctions", fields: [buyerEmail], references: [email])
+  suppliers     AuctionSupplier[]
+  bids          Bid[]
+}
+
+enum AuctionStatus {
+  LIVE
+  CLOSED
+}
+
+//
+// ────────────────────────────────────────────────
+//  SUPPLIER INVITE MODEL
+// ────────────────────────────────────────────────
+//
+
+model AuctionSupplier {
+  id             String   @id @default(cuid())
+  auctionId      String
+  supplierEmail  String
+  initialBid     Float?   // optional — can be used if we want to prefill start bid
+  createdAt      DateTime @default(now())
+
+  // Relations
+  auction        Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+}
+
+//
+// ────────────────────────────────────────────────
+//  BID MODEL
+// ────────────────────────────────────────────────
+//
+
+model Bid {
+  id             String   @id @default(cuid())
+  auctionId      String
+  supplierEmail  String
+  amount         Float
+  decrement      Float
+  rank           Int?
+  createdAt      DateTime @default(now())
+
+  // Relations
+  Auction        Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  Supplier       User?     @relation("SupplierBids", fields: [supplierEmail], references: [email])
+}
+
+//
+// ────────────────────────────────────────────────
+//  INDEXES & OPTIMIZATION
+// ────────────────────────────────────────────────
+//
+
+@@index([auctionId])
+@@index([supplierEmail])
+@@index([buyerEmail])
 
