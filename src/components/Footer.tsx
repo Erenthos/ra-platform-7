@@ -12,7 +12,7 @@ export default function Footer() {
     >
       <div className="flex flex-col items-center justify-center space-y-2">
         <p className="text-sm text-gray-300">
-          © {new Date().getFullYear()} English Reverse Auction Platform
+          © {new Date().getFullYear()} Avaada's English Reverse Auction Platform
         </p>
         <p className="text-xs text-gray-400">
           Crafted with <span className="text-pink-400">❤</span> using Next.js, Prisma & Aurora Design
