@@ -53,6 +53,8 @@ model Auction {
   buyer         User?            @relation("BuyerAuctions", fields: [buyerEmail], references: [email])
   suppliers     AuctionSupplier[]
   bids          Bid[]
+
+  @@index([buyerEmail])
 }
 
 enum AuctionStatus {
@@ -70,11 +72,13 @@ model AuctionSupplier {
   id             String   @id @default(cuid())
   auctionId      String
   supplierEmail  String
-  initialBid     Float?   // optional — can be used if we want to prefill start bid
+  initialBid     Float?
   createdAt      DateTime @default(now())
 
-  // Relations
   auction        Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@index([auctionId])
+  @@index([supplierEmail])
 }
 
 //
@@ -92,18 +96,9 @@ model Bid {
   rank           Int?
   createdAt      DateTime @default(now())
 
-  // Relations
   Auction        Auction  @relation(fields: [auctionId], references: [id], onDelete: Cascade)
-  Supplier       User?     @relation("SupplierBids", fields: [supplierEmail], references: [email])
+  Supplier       User?    @relation("SupplierBids", fields: [supplierEmail], references: [email])
+
+  @@index([auctionId])
+  @@index([supplierEmail])
 }
-
-//
-// ────────────────────────────────────────────────
-//  INDEXES & OPTIMIZATION
-// ────────────────────────────────────────────────
-//
-
-@@index([auctionId])
-@@index([supplierEmail])
-@@index([buyerEmail])
-
