@@ -1,18 +1,16 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import CredentialsProvider from 'next-auth/providers/credentials'
+import NextAuth from 'next-auth'
+import Credentials from 'next-auth/providers/credentials'
+import { PrismaAdapter } from '@auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcrypt'
 
-export const authOptions = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
-  session: {
-    strategy: 'jwt',
-  },
+  session: { strategy: 'jwt' },
   providers: [
-    CredentialsProvider({
-      name: 'Credentials',
+    Credentials({
       credentials: {
-        email: { label: 'Email', type: 'email', placeholder: 'you@example.com' },
+        email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
@@ -21,17 +19,12 @@ export const authOptions = {
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         })
-        if (!user) throw new Error('No user found')
+        if (!user) return null
 
-        const valid = await bcrypt.compare(credentials.password, user.password)
-        if (!valid) throw new Error('Invalid password')
+        const isValid = await bcrypt.compare(credentials.password, user.password)
+        if (!isValid) return null
 
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        }
+        return { id: user.id, name: user.name, email: user.email, role: user.role }
       },
     }),
   ],
@@ -40,20 +33,13 @@ export const authOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = user.role
-      }
+      if (user) token.user = user
       return token
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id
-        session.user.role = token.role
-      }
+      session.user = token.user
       return session
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
-}
-
+})
