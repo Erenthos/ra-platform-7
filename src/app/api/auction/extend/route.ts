@@ -1,58 +1,31 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { auth } from '@/lib/auth'
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
+    const session = await auth()
+    if (!session?.user || session.user.role !== 'BUYER') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { id, extraMinutes = 5 } = await req.json()
-
-    if (!id) {
-      return NextResponse.json({ error: 'Auction ID missing' }, { status: 400 })
+    const { auctionId, extendMinutes } = await req.json()
+    if (!auctionId || !extendMinutes) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Find the auction
-    const auction = await prisma.auction.findUnique({
-      where: { id },
-    })
-
-    if (!auction) {
-      return NextResponse.json({ error: 'Auction not found' }, { status: 404 })
-    }
-
-    // Verify buyer ownership
-    if (auction.buyerEmail !== session.user.email) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-    }
-
-    if (auction.status !== 'LIVE') {
-      return NextResponse.json({ error: 'Auction is closed' }, { status: 400 })
-    }
-
-    // Extend end time
-    const newEndTime = new Date(auction.endsAt)
-    newEndTime.setMinutes(newEndTime.getMinutes() + extraMinutes)
-
-    const updated = await prisma.auction.update({
-      where: { id },
+    const auction = await prisma.auction.update({
+      where: { id: auctionId },
       data: {
-        endsAt: newEndTime,
+        endsAt: {
+          set: new Date(Date.now() + extendMinutes * 60000),
+        },
       },
     })
 
-    return NextResponse.json({
-      message: `Auction extended by ${extraMinutes} minutes`,
-      newEndTime,
-      updated,
-    })
-  } catch (error: any) {
-    console.error('Auction Extend Error:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ success: true, auction })
+  } catch (error) {
+    console.error('Extend Auction Error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
-
