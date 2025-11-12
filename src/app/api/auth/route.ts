@@ -1,7 +1,5 @@
-import NextAuth from 'next-auth'
-import { authOptions } from '@/lib/auth'
+// ✅ NextAuth v5 compatible route handler
+// This connects your /api/auth/* routes to the NextAuth handlers
+// defined inside src/lib/auth.ts
 
-const handler = NextAuth(authOptions)
-
-export { handler as GET, handler as POST }
-
+export { handlers as GET, handlers as POST } from '@/lib/auth'
